@@ -1,0 +1,18 @@
+**/__pycache__/
+/.ruff_cache/
+/.pytest_cache/
+.venv/
+.DS_Store
+.env
+.env.*
+# app build output, if linked in for tools/profile-miner/run.sh or scripts/eval_profile_prefix.py
+/target
+
+# ml/: the research log, goal file and field recordings stay on the machines that make them
+/ml/DEVLOG.md
+/ml/GOAL.md
+/ml/research/record_terms/read_script.jsonl
+/ml/research/record_terms/recordings.jsonl
+/ml/research/record_terms/wav/
+# Research trained on a third-party app's output; kept on the research machines
+/ml/research/distill_v1/
