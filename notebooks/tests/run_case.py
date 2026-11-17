@@ -17,8 +17,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from cases import CASES, PACKS  # noqa: E402
-from nb2script import cell_sources, convert  # noqa: E402
+from cases import CASES, PACKS
+from nb2script import cell_sources, convert
 
 NB = HERE.parent / "phonon_voice_finetune.ipynb"
 RES = HERE / "results"
@@ -35,7 +35,7 @@ def colab(*args, timeout=None, check=False):
     cmd = ["colab", "--auth=oauth2", "--config", CFG, *args]
     t0 = time.time()
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired as e:
         r = subprocess.CompletedProcess(cmd, -9, _text(e.stdout), _text(e.stderr) + f"\n[harness] killed after {timeout}s")
     if check and r.returncode != 0:
@@ -72,7 +72,8 @@ def exec_watched(sess, script, timeout, out_path, kill_marker=None):
             except subprocess.TimeoutExpired:
                 p.kill()
                 p.wait()
-    out = open(out_path).read()
+    with open(out_path) as f:
+        out = f.read()
     rc = p.returncode if how == "done" else -9
     return subprocess.CompletedProcess(cmd, rc, out, ""), round(time.time() - t0, 1), how
 
@@ -145,107 +146,107 @@ def run(case_name, keep=None, name=None):
     name = name or case_name
     case = dict(CASES[case_name], name=name)
     RES.mkdir(exist_ok=True)
-    log = open(RES / f"{name}.log", "w")
+    with open(RES / f"{name}.log", "w") as log:
+        def L(*a):
+            s = " ".join(str(x) for x in a)
+            print(s, flush=True)
+            log.write(s + "\n")
+            log.flush()
 
-    def L(*a):
-        s = " ".join(str(x) for x in a)
-        print(s, flush=True)
-        log.write(s + "\n")
-        log.flush()
-
-    script = RES / f"{name}.script.py"
-    included = convert(NB, case, script)
-    # the runner sends each notebook cell's source as is, in order (cells after the case's stop_after are left out)
-    assert included == cell_sources(NB)[: len(included)], "the runner does not run the notebook's cells verbatim in order"
-    L(f"case {name}: {case.get('what', '')}")
-    sess = keep or f"nbt-{name.replace('_', '-')}"[:30]
-    b0 = balance()
-    t_start = time.time()
-    # hard wall-clock limit for the whole case (allocation to stop): every notebook run's own limit plus 30 minutes
-    wall_limit = case.get("wall_timeout", case.get("timeout", 5400) * case.get("runs", 1) + 1800)
-    deadline = t_start + wall_limit
-    import hashlib
-    res = {"case": name, "what": case.get("what"), "runtime": case.get("runtime", "T4"), "balance_before": b0,
-           "notebook_sha256": hashlib.sha256(NB.read_bytes()).hexdigest()}
-    try:
-        if not keep:
-            args = ["new", "-s", sess] + (["--gpu", case.get("runtime", "T4")] if case.get("runtime", "T4") != "CPU" else [])
-            r, dt = colab(*args, timeout=900)
-            L("new", dt, "s rc", r.returncode, r.stderr.strip()[-300:])
-            if r.returncode != 0:
-                res["error"] = "allocation failed: " + r.stderr[-500:]
-                return res
-        t_alloc = time.time()
-        mk = RES / f"{name}.mkdir.py"
-        mk.write_text("import os\nos.makedirs('/content/test_input', exist_ok=True)\n")
-        # a fresh VM's first exec occasionally stalls (seen once: 400 s with no reply), so setup steps get a second
-        # try, and a case whose setup still fails is recorded as a harness error instead of running the notebook
-        for attempt in range(2):
-            r, dt = colab("exec", "-s", sess, "-f", str(mk), "--timeout", "120", timeout=180)
-            L("mkdir", dt, "s rc", r.returncode)
-            if r.returncode == 0:
-                break
-        for local in case.get("upload", []):
-            p = PACKS / local
+        script = RES / f"{name}.script.py"
+        included = convert(NB, case, script)
+        # the runner sends each notebook cell's source as is, in order (cells after the case's stop_after are left out)
+        assert included == cell_sources(NB)[: len(included)], "the runner does not run the notebook's cells verbatim in order"
+        L(f"case {name}: {case.get('what', '')}")
+        sess = keep or f"nbt-{name.replace('_', '-')}"[:30]
+        b0 = balance()
+        t_start = time.time()
+        # hard wall-clock limit for the whole case (allocation to stop): every notebook run's own limit plus 30 minutes
+        wall_limit = case.get("wall_timeout", case.get("timeout", 5400) * case.get("runs", 1) + 1800)
+        deadline = t_start + wall_limit
+        import hashlib
+        res = {"case": name, "what": case.get("what"), "runtime": case.get("runtime", "T4"), "balance_before": b0,
+               "notebook_sha256": hashlib.sha256(NB.read_bytes()).hexdigest()}
+        try:
+            if not keep:
+                args = ["new", "-s", sess] + (["--gpu", case.get("runtime", "T4")] if case.get("runtime", "T4") != "CPU" else [])
+                r, dt = colab(*args, timeout=900)
+                L("new", dt, "s rc", r.returncode, r.stderr.strip()[-300:])
+                if r.returncode != 0:
+                    res["error"] = "allocation failed: " + r.stderr[-500:]
+                    return res
+            t_alloc = time.time()
+            mk = RES / f"{name}.mkdir.py"
+            mk.write_text("import os\nos.makedirs('/content/test_input', exist_ok=True)\n")
+            # a fresh VM's first exec occasionally stalls (seen once: 400 s with no reply), so setup steps get a second
+            # try, and a case whose setup still fails is recorded as a harness error instead of running the notebook
             for attempt in range(2):
-                r, dt = colab("upload", "-s", sess, str(p), f"/content/test_input/{p.name}", timeout=900)
-                L("upload", p.name, dt, "s rc", r.returncode, r.stderr.strip()[-200:])
+                r, dt = colab("exec", "-s", sess, "-f", str(mk), "--timeout", "120", timeout=180)
+                L("mkdir", dt, "s rc", r.returncode)
                 if r.returncode == 0:
                     break
-            if r.returncode != 0:
-                res["error"] = f"harness setup failed: upload of {p.name} rc {r.returncode}"
-                return res
-        runs = case.get("runs", 1)
-        res["runs"] = []
-        for k in range(runs):
-            if k > 0:
-                r, dt = colab("restart-kernel", "-s", sess, timeout=300)
-                L("restart-kernel", dt, "s rc", r.returncode)
-                case2 = dict(case, setup=case.get("setup_rerun", ""))
-                convert(NB, case2, script)
-            t0 = time.time()
-            left = int(deadline - time.time())
-            if left < 120:
-                res["error"] = f"case wall-clock limit ({wall_limit} s) reached before run {k}"
-                L(res["error"])
-                break
-            r, dt, how = exec_watched(sess, script, min(case.get("timeout", 5400), left),
-                                      RES / f"{name}.run{k}.out", case.get("kill_marker") if k == 0 else None)
-            out = r.stdout + "\n" + r.stderr
-            log.write(f"===== run {k} stdout/stderr =====\n{out}\n")
-            ra = analyze(out)
-            printed = out.split("RUNALL_JSON")[0]  # what the cells printed (the JSON line repeats their tails)
-            notes = re.findall(r"NOTE: (.*)", printed)
-            L(f"run {k}: exec rc {r.returncode} ({how}) in {dt}s; stopped: {ra['stopped'][:1]}; done: {ra['all_done']}; "
-              f"checks: {ra['checks']}")
-            if how == "timeout":
-                res["error"] = f"run {k} hit its time limit ({min(case.get('timeout', 5400), left)} s)"
-            res["runs"].append({"rc": r.returncode, "how": how, "secs": round(time.time() - t0, 1), "notes": notes[:12],
-                                "resumed": re.findall(r"Resuming from the checkpoint at step \d+ of \d+", printed), **ra})
-        cp = RES / f"{name}.collect.py"
-        cp.write_text(COLLECT)
-        for attempt in range(2):  # the client has lost its connection here once ("Connection was lost.")
-            r, dt = colab("exec", "-s", sess, "-f", str(cp), "--timeout", "120", timeout=240)
-            m = re.search(r"COLLECT_JSON(.*)", r.stdout)
-            if m:
-                break
-            L("collect", dt, "s rc", r.returncode, "no result" + (", retrying" if attempt == 0 else ""))
-        res["collected"] = json.loads(m.group(1)) if m else {"error": (r.stdout + r.stderr)[-500:]}
-        for remote, local in case.get("fetch", []):
-            local = local.format(name=name)
-            r, dt = colab("download", "-s", sess, remote, str(RES / local), timeout=1800)
-            L("download", remote, dt, "s rc", r.returncode)
-            res.setdefault("fetched", []).append({"remote": remote, "secs": dt, "rc": r.returncode,
-                                                  "bytes": (RES / local).stat().st_size if (RES / local).exists() else None})
-        res["session_secs"] = round(time.time() - t_alloc, 1)
-    finally:
-        if not keep:
-            r, dt = colab("stop", "-s", sess, timeout=300)
-            L("stop", dt, "s rc", r.returncode, r.stderr.strip()[-200:])
-        res["wall_s"] = round(time.time() - t_start, 1)
-        res["balance_after"] = balance()
-        json.dump(res, open(RES / f"{name}.json", "w"), indent=1, default=str)
-        L(json.dumps({k: res.get(k) for k in ("case", "wall_s", "balance_before", "balance_after")}))
+            for local in case.get("upload", []):
+                p = PACKS / local
+                for attempt in range(2):
+                    r, dt = colab("upload", "-s", sess, str(p), f"/content/test_input/{p.name}", timeout=900)
+                    L("upload", p.name, dt, "s rc", r.returncode, r.stderr.strip()[-200:])
+                    if r.returncode == 0:
+                        break
+                if r.returncode != 0:
+                    res["error"] = f"harness setup failed: upload of {p.name} rc {r.returncode}"
+                    return res
+            runs = case.get("runs", 1)
+            res["runs"] = []
+            for k in range(runs):
+                if k > 0:
+                    r, dt = colab("restart-kernel", "-s", sess, timeout=300)
+                    L("restart-kernel", dt, "s rc", r.returncode)
+                    case2 = dict(case, setup=case.get("setup_rerun", ""))
+                    convert(NB, case2, script)
+                t0 = time.time()
+                left = int(deadline - time.time())
+                if left < 120:
+                    res["error"] = f"case wall-clock limit ({wall_limit} s) reached before run {k}"
+                    L(res["error"])
+                    break
+                r, dt, how = exec_watched(sess, script, min(case.get("timeout", 5400), left),
+                                          RES / f"{name}.run{k}.out", case.get("kill_marker") if k == 0 else None)
+                out = r.stdout + "\n" + r.stderr
+                log.write(f"===== run {k} stdout/stderr =====\n{out}\n")
+                ra = analyze(out)
+                printed = out.split("RUNALL_JSON")[0]  # what the cells printed (the JSON line repeats their tails)
+                notes = re.findall(r"NOTE: (.*)", printed)
+                L(f"run {k}: exec rc {r.returncode} ({how}) in {dt}s; stopped: {ra['stopped'][:1]}; done: {ra['all_done']}; "
+                  f"checks: {ra['checks']}")
+                if how == "timeout":
+                    res["error"] = f"run {k} hit its time limit ({min(case.get('timeout', 5400), left)} s)"
+                res["runs"].append({"rc": r.returncode, "how": how, "secs": round(time.time() - t0, 1), "notes": notes[:12],
+                                    "resumed": re.findall(r"Resuming from the checkpoint at step \d+ of \d+", printed), **ra})
+            cp = RES / f"{name}.collect.py"
+            cp.write_text(COLLECT)
+            for attempt in range(2):  # the client has lost its connection here once ("Connection was lost.")
+                r, dt = colab("exec", "-s", sess, "-f", str(cp), "--timeout", "120", timeout=240)
+                m = re.search(r"COLLECT_JSON(.*)", r.stdout)
+                if m:
+                    break
+                L("collect", dt, "s rc", r.returncode, "no result" + (", retrying" if attempt == 0 else ""))
+            res["collected"] = json.loads(m.group(1)) if m else {"error": (r.stdout + r.stderr)[-500:]}
+            for remote, local in case.get("fetch", []):
+                local = local.format(name=name)
+                r, dt = colab("download", "-s", sess, remote, str(RES / local), timeout=1800)
+                L("download", remote, dt, "s rc", r.returncode)
+                res.setdefault("fetched", []).append({"remote": remote, "secs": dt, "rc": r.returncode,
+                                                      "bytes": (RES / local).stat().st_size if (RES / local).exists() else None})
+            res["session_secs"] = round(time.time() - t_alloc, 1)
+        finally:
+            if not keep:
+                r, dt = colab("stop", "-s", sess, timeout=300)
+                L("stop", dt, "s rc", r.returncode, r.stderr.strip()[-200:])
+            res["wall_s"] = round(time.time() - t_start, 1)
+            res["balance_after"] = balance()
+            with open(RES / f"{name}.json", "w") as jf:
+                json.dump(res, jf, indent=1, default=str)
+            L(json.dumps({k: res.get(k) for k in ("case", "wall_s", "balance_before", "balance_after")}))
     return res
 
 

@@ -1,29 +1,64 @@
-# ml: the Phonon refiner pipeline
+# ml: the Phonon refiner and ASR research pipeline
 
-Lives in the app repo under `ml/` (code only). Runs on a Linux GPU box: it was built on 4x RTX
-PRO 6000 Blackwell (96 GB, sm_120, CUDA 13), a 64-core CPU and 60 GB of RAM. Data, adapters,
-audio and run outputs live under `/data` on that box and never enter git. Nothing here trains or
-runs heavy inference on a Mac; the Mac only runs the shipped int4 model and the recorder script.
+Lives in [`Infatoshi/phonon-research`](https://github.com/Infatoshi/phonon-research) under `ml/`
+(code only; split out of `Infatoshi/phonon` on 2026-11-15 with git history; see the root
+`README.md` for `notebooks/`, `tools/`, `scripts/`, and `kernels/roofline/`). Runs on a Linux GPU
+box: 4x RTX PRO 6000 Blackwell (96 GB, `sm_120`, CUDA 13), 128 CPU threads, and 246 GiB of RAM
+(earlier runs used a 64-core / 60 GB container). Data, adapters, audio, and run outputs live under
+`/data/phonon/` on that box and never enter git. Nothing here trains or runs heavy inference on a
+Mac; the Mac runs the shipped app models, the recorder script, and `notebooks/tests/` against Colab.
 
-The research scripts hardcode their root as `/home/user/phonon`, which is this `ml/` directory
-checked out on the GPU box (the original path had a username in it). Run from a checkout there,
-or edit the constant. `/data/...` paths are real and listed under Data below.
+Legacy research scripts hardcode their root as `/home/user/phonon` (an anonymized placeholder for
+the checkout on the GPU box) and `/data/phonon_*` paths (consolidated under `/data/phonon/<dir>` on
+2026-10-25, with `/data/phonon_*` kept as symlinks). Run from a checkout there, or edit the
+constants.
 
 ## What this is
 
-Phonon's text path is Parakeet TDT 0.6B v2 (ASR), then a small language model that rewrites the
-raw transcript into what the speaker meant. This tree builds that second model. The refiner is
-LFM2.5-1.2B-Instruct with a LoRA adapter; it sees the raw transcript plus a short vocabulary list
-retrieved from the user's own code, and it is trained on acoustic synthetic pairs (generated
-sentence, Kokoro TTS, Parakeet) plus the user's real dictation pairs. `SPEC.md` has the design and
-the eval roadmap. The full experiment log is a private `DEVLOG.md` kept with the research tree on the
-GPU box (ignored here, like the root one); the numbers that decide anything are in these two files.
+Phonon's text path is Parakeet TDT 0.6B (ASR), then a small language model that rewrites the raw
+transcript into what the speaker meant. Earlier work here built a LoRA refiner on
+`LFM2.5-1.2B-Instruct` with retrieval over a per-user symbol index; later work moved the public
+refiner to a full fine-tune of `LiquidAI/LFM3-1.7B` on public/synthetic audio only, and added
+Parakeet TDT 0.6B robustness/accent fine-tunes and per-speaker Colab voice adaptation. `SPEC.md`
+has the earlier LFM2.5 design and eval roadmap. The full experiment log is a private `DEVLOG.md`
+kept on the GPU box (gitignored here, like `GOAL.md`).
+
+## State (2026-11-17)
+
+**Shipped refiner (`LFM3-1.7B`, context-aware public fine-tune).** The `LFM2.5-1.2B` LoRA recipe
+(`restr_real12` / `bigrun_mid_r16`) and its `ship_v0` queue (halted 2026-09-21 at 4 of 18 jobs) are
+superseded. Since Phonon 0.2.0 (2026-10-30, commit `96b4951`), the refiner is a full fine-tune of
+`LiquidAI/LFM3-1.7B` trained on public and synthetic data only (no personal data in training; the
+vocabulary line is the only personalisation), running on the native Metal engine (`DFlash2` drafter +
+`llama.cpp` prefill, MLX fallback). The latest shipped refiner build (`ship_ctx6`, 2026-11-16) is
+`s3d_ctx6_s1`: four writing modes (`minimal`, `casual`, `formal`, `prompt`) with optional
+`Vocabulary`, `On screen` (up to 350 words), and `Before cursor` (up to 40 words + join rule)
+context lines, exported to GGUF `Q4_K_S` (4-bit embeddings/head, public-calibration imatrix) and
+MLX `custom_attn6emb8`.
+
+**Shipped ASR (`phonon-n8avg`) & user voice adaptation.** The shipped ASR model is `phonon-n8avg`:
+`nvidia/parakeet-tdt-0.6b-v2` with the `N8avg` rank-32 LoRA (exact 2-seed average of `N8_r16` and
+`N8s1_r16` trained on `NEdc` for noise and background-talker robustness). User-side per-speaker
+adaptation lives in `notebooks/phonon_voice_finetune.ipynb` (tested via `notebooks/tests/`,
+documented in `README.md`, `notebooks/TESTING.md`, and `notebooks/APP_WIRING.md`, with public
+guard/augmentation packs in `notebooks/guard/`).
+
+**Active GPU-box research lines (not yet imported into `ml/research/`).** Recent November 2026
+training and evaluation harnesses live under `/data/phonon/` on the GPU box pending path cleanup and
+outbound sweep before import here:
+
+- Refiner & term-exactness work: `ctx_v0` (context-line training/eval), `genterms`, `gt2`
+  (synthetic term-exactness), `ship_ctx6` (export/cards), `std_v2`.
+- Parakeet v3 / accent / multilingual robustness & benchmark work: `v3bench`, `v3n8_v0`,
+  `v3sweep_v0`, `alb_v0` (accent & language benchmark), `accent2_v0`, `accent3_v0`, plus
+  `voiceft_v0` / `voicenb_v0` (per-speaker adaptation study).
 
 ## State (2026-10-23)
 
-Earlier distillation experiments are kept out of this repository.
+Earlier distillation experiments are kept out of this repository (`/ml/research/distill_v1/` is
+gitignored).
 
-## State (2026-09-28)
+## Historical state (2026-09-28, superseded)
 
 **Ship recipe.** LFM2.5-1.2B, LoRA r16, trained on the 14.5k-term acoustic corpus with the real
 pairs repeated x12 (`restr_real12` recipe); retrieval v2, two-stage, with the adaptive list budget
@@ -57,7 +92,7 @@ uv run --project research/harness phonon-research status --run ship_v0
 The shell jobs call scripts under `/data/phonon_ship_v0/scripts/`; copies are in
 `research/ship_v0/scripts/`. Check `nvidia-smi` first: the box is shared.
 
-**Open work**, in order:
+**Historical open work (from 2026-09-28, superseded):**
 
 1. Resume `ship_v0` and fill the ship and quantization tables (`research/ship_v0/scripts/report.py`).
 2. Record the field set: 300 held-out-term sentences read aloud (`research/record_terms/record.py`).
@@ -66,6 +101,14 @@ The shell jobs call scripts under `/data/phonon_ship_v0/scripts/`; copies are in
 3. Multiprocess the bench's retrieval stage (140 s of GIL-bound Python on every backend; target
    under 15 s). `retrieval_mp` in the queue is that job.
 4. Lift `research/bench_v0` into `tools/` as the release gate.
+
+## Tests and CI
+
+`ml/conftest.py` sets `collect_ignore_glob = ["*"]` because the legacy `ml/` test files
+(`research/corrector_v0/test_corrector_v0.py`, `scripts/option0/test_*.py`) read GPU-box datasets
+not committed to git. GitHub Actions (`.github/workflows/ci.yml`) runs `ruff check` on `scripts/`,
+`tools/voice_pack.py`, `tools/persona-gym/`, `notebooks/tests/`, and `ml/research/harness/`, and
+runs `pytest` on `tools/persona-gym/tests/`.
 
 ## Layout
 
@@ -124,6 +167,9 @@ backend: 64 s for all six sets.
 
 ## Data on the GPU box
 
+As of 2026-10-25, `/data/phonon_*` paths below are symlinks into `/data/phonon/<dir>` (without the
+`phonon_` prefix).
+
 | path | what |
 |---|---|
 | `/data/phonon_bench_v0/sets/` | frozen bench fixtures with a sha256 manifest; `ref/` cached bf16 numerics; `bench.jsonl` run log |
@@ -133,6 +179,8 @@ backend: 64 s for all six sets.
 | `/data/phonon_quant_v0/` | merged model, MLX and GGUF builds, imatrix |
 | `/data/phonon_queue/<run>/` | queue state and logs |
 | `/data/phonon_personal/` | the owner's dictation exports. Never copied, never published, never a generation source |
+| `/data/phonon/{ctx_v0,genterms,gt2,ship_ctx6,std_v2}/` | LFM3-1.7B context refiner and synthetic term-exactness research |
+| `/data/phonon/{alb_v0,accent2_v0,accent3_v0,v3bench,v3n8_v0,v3sweep_v0,voiceft_v0,voicenb_v0}/` | Parakeet v2/v3 accent, multilingual robustness, and per-speaker adaptation research |
 
 ## Rules
 

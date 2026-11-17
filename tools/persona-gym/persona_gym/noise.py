@@ -8,7 +8,6 @@ drowns in "Reply with exactly: PONG". This pass makes the logs look real.
 Noise never contains planted terms (checked), so gold counts stay valid.
 """
 import random
-import re
 import sys
 from pathlib import Path
 

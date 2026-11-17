@@ -6,10 +6,19 @@ on:
 
 jobs:
   lint:
-    # Lint scripts/ and the notebook's local helper tools/voice_pack.py, which are ruff-clean; the rest of ml/ and
-    # tools/ is not, and is left as it ran.
+    # Lint host-independent scripts, tools/persona-gym, notebook test harness, and ml/research/harness.
+    # notebooks/src/ (embedded verbatim in the tested Colab notebook), legacy ml/, tools/profile-miner/, and tools/dev/
+    # are left as they ran.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv run --with ruff ruff check scripts tools/voice_pack.py
+      - run: uv run --with ruff ruff check scripts tools/voice_pack.py tools/persona-gym notebooks/tests ml/research/harness
+
+  test:
+    # Run CPU-only unit tests that do not depend on GPU-box datasets (ml/conftest.py ignores ml/).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run --with pytest --with pyyaml pytest tools/persona-gym/tests

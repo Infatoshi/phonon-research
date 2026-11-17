@@ -6,9 +6,10 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterable, Iterator
+from typing import Any
 
 import yaml
 
@@ -76,16 +77,16 @@ def read_json(path: str | Path, default: Any = None) -> Any:
         return default
     try:
         return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
+    except (OSError, json.JSONDecodeError):
         return default
 
 
 def git_rev(repo: Path = REPO) -> str:
     try:
         out = subprocess.run(["git", "-C", str(repo), "rev-parse", "--short", "HEAD"],
-                             capture_output=True, text=True, timeout=20)
+                             check=False, capture_output=True, text=True, timeout=20)
         return out.stdout.strip() or "unknown"
-    except Exception:
+    except (subprocess.SubprocessError, OSError):
         return "unknown"
 
 

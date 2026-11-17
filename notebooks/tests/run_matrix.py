@@ -11,7 +11,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from cases import CASES  # noqa: E402
+from cases import CASES
 
 n, cases = int(sys.argv[1]), sys.argv[2:]
 unknown = [c for c in cases if c not in CASES]
@@ -20,7 +20,7 @@ if unknown:
 
 
 def active():
-    r = subprocess.run(["pgrep", "-f", "run_case.py"], capture_output=True, text=True)
+    r = subprocess.run(["pgrep", "-f", "run_case.py"], check=False, capture_output=True, text=True)
     return len(r.stdout.split())
 
 
@@ -36,8 +36,8 @@ while cases or running:
     if cases and active() < n:  # one start per pass, so a refused allocation is seen before the next start
         c = cases.pop(0)
         (HERE / "results" / f"{c}.json").unlink(missing_ok=True)  # a stale result must not stand in for this run
-        log =open(HERE / "results" / f"{c}.runner.out", "w")
-        p = subprocess.Popen([sys.executable, str(HERE / "run_case.py"), c], stdout=log, stderr=subprocess.STDOUT)
+        with open(HERE / "results" / f"{c}.runner.out", "w") as log:
+            p = subprocess.Popen([sys.executable, str(HERE / "run_case.py"), c], stdout=log, stderr=subprocess.STDOUT)
         running.append((c, p, time.time()))
         print(time.strftime("%H:%M:%S"), "started", c, flush=True)
         time.sleep(20)  # stagger allocations
@@ -52,7 +52,11 @@ while cases or running:
         if p.poll() is not None:
             running.remove((c, p, t0))
             res = HERE / "results" / f"{c}.json"
-            err = json.load(open(res)).get("error", "") if res.exists() else "no result json"
+            if res.exists():
+                with open(res) as f:
+                    err = json.load(f).get("error", "")
+            else:
+                err = "no result json"
             if err.startswith("allocation failed") and requeued.get(c, 0) < 5:
                 requeued[c] = requeued.get(c, 0) + 1
                 print(time.strftime("%H:%M:%S"), "allocation refused, queued again:", c, flush=True)

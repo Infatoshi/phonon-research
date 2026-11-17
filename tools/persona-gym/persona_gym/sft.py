@@ -104,7 +104,8 @@ def export(personas: Path, rollouts: Path, out: Path, strict: Path | None = None
             traj = rollouts / p / rn / "trajectory.jsonl"
             if not traj.exists():
                 continue
-            rows = [json.loads(l) for l in open(traj)]
+            with open(traj) as tf:
+                rows = [json.loads(l) for l in tf]
             msgs = clean_messages(rows)
             if msgs is None:
                 dropped += 1
@@ -133,7 +134,7 @@ def export(personas: Path, rollouts: Path, out: Path, strict: Path | None = None
                 if m.get("term") and m.get("mangled"):
                     by_term.setdefault(m["term"], []).append(m["mangled"])
             for term, forms in by_term.items():
-                pat = re.compile("|".join(re.escape(x) for x in forms), re.I)
+                pat = re.compile("|".join(re.escape(x) for x in forms), re.IGNORECASE)
                 hits = [l for l in logs if pat.search(l)][:8]
                 if not hits:
                     continue

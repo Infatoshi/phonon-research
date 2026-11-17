@@ -10,14 +10,13 @@ A job is {name, kind: corpus|train|eval|shell, gpu: 0|1|any, needs: [names], con
 """
 from __future__ import annotations
 
-import json
 import os
 import subprocess
 import time
 from pathlib import Path
 
-from .paths import HARNESS, QUEUE_ROOT, REPO, hf_env
-from .util import log, load_yaml, python_exe, read_json, resolve_config, stamp, table, write_json
+from .paths import HARNESS, QUEUE_ROOT, REPO
+from .util import load_yaml, log, python_exe, read_json, resolve_config, stamp, table, write_json
 
 TERMINAL = ("done", "failed", "skipped")
 POLL = 3.0
@@ -29,12 +28,12 @@ def detect_gpus() -> list[int]:
     hard-coding [0, 1] silently halved the queue, so ask the driver."""
     try:
         out = subprocess.run(["nvidia-smi", "--query-gpu=index", "--format=csv,noheader"],
-                             capture_output=True, text=True, timeout=30)
+                             check=False, capture_output=True, text=True, timeout=30)
         gs = [int(x) for x in out.stdout.split() if x.strip().isdigit()]
         if gs:
             return gs
-    except Exception:
-        pass
+    except (subprocess.SubprocessError, OSError):
+        return [0, 1]
     return [0, 1]
 
 
@@ -136,7 +135,7 @@ echo $rc > {d}/{n}.rc
 def _stamp_file(p: Path) -> float | None:
     try:
         return float(p.read_text().strip())
-    except Exception:
+    except (OSError, ValueError):
         return None
 
 
@@ -293,7 +292,7 @@ def scheduler(jobs_yaml: str | Path, run: str | None = None) -> int:
             break
         if st.get("agent") and time.time() - last_hb > HEARTBEAT_EVERY:
             subprocess.run(["overnight-compute", "heartbeat", "--agent", st["agent"],
-                            "--ttl", "30m"], capture_output=True)
+                            "--ttl", "30m"], check=False, capture_output=True)
             last_hb = time.time()
         time.sleep(POLL)
     st["finished"] = stamp()

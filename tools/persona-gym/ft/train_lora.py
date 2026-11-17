@@ -15,10 +15,9 @@ from pathlib import Path
 
 import torch
 import torch.nn.functional as F
-from torch.utils.checkpoint import checkpoint
 from peft import LoraConfig, get_peft_model
-from transformers import (AutoModelForCausalLM, AutoTokenizer, Trainer,
-                          TrainingArguments)
+from torch.utils.checkpoint import checkpoint
+from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
 
 
 def render(tok, messages, tools):
@@ -161,7 +160,8 @@ def main():
     for name in ("train_trajectories.jsonl", "train_aux.jsonl", "train_generic.jsonl"):
         p = Path(a.data) / name
         if p.exists():
-            rows = [json.loads(l) for l in open(p)]
+            with open(p) as pf:
+                rows = [json.loads(l) for l in pf]
             print(f"[data] {name}: {len(rows)}", file=sys.stderr)
             samples += rows
     enc, skipped, lens = [], 0, []

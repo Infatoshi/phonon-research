@@ -264,7 +264,8 @@ def convert(nb_path, case, out_path):
     runner = RUNNER % {"cells": json.dumps({"runall": runall, "notebook": notebook})}
     # `colab exec` runs code inside a kernel, where jupyter_client's blocking client got the replies but none of the
     # output (tried on Colab); so the exec only starts the runner as its own process and relays what it prints
-    open(out_path, "w").write(WRAPPER % {"runner": runner})
+    with open(out_path, "w") as f:
+        f.write(WRAPPER % {"runner": runner})
     return [c["code"] for c in runall if c["kind"] == "notebook"]
 
 
@@ -274,4 +275,5 @@ def cell_sources(nb_path):
 
 
 if __name__ == "__main__":
-    convert(sys.argv[1], json.load(open(sys.argv[2])), sys.argv[3])
+    with open(sys.argv[2]) as f:
+        convert(sys.argv[1], json.load(f), sys.argv[3])

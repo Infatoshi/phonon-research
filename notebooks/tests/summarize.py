@@ -7,7 +7,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from cases import CASES  # noqa: E402
+from cases import CASES
 
 RATE = {"T4": 1.07, "CPU": 0.08}  # compute units per hour of an allocated runtime (measured rates for this account)
 
@@ -39,7 +39,8 @@ def verdict(case, r):
         ok &= bool(last.get("all_done"))
     if e.get("resumed"):
         ok &= any(x.get("resumed") for x in runs)
-        out.append("; ".join(dict.fromkeys(sum((x.get("resumed") or [] for x in runs), []))) or "no resume line")
+        resumed = [line for x in runs for line in (x.get("resumed") or [])]
+        out.append("; ".join(dict.fromkeys(resumed)) or "no resume line")
     if "note" in e:
         ok &= any(e["note"] in n for x in runs for n in x.get("notes", []))
     if (r.get("collected") or {}).get("error"):
@@ -67,7 +68,8 @@ for name in names:
     p = HERE / "results" / f"{name}.json"
     if not p.exists():
         continue
-    r = json.load(open(p))
+    with open(p) as f:
+        r = json.load(f)
     c = CASES[name]
     ok, det = verdict(c, r)
     m = (r.get("collected") or {}).get("metrics", {})
