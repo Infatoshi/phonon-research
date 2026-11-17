@@ -94,11 +94,14 @@ KEEP = ["torch", "torchaudio", "torchvision", "numpy", "scipy", "numba", "llvmli
 
 
 # ------------------------------------------------------------------------------------------------ messages
-class PhononStop(Exception):
-    """A problem the user can fix. Shown as a short message instead of a long Python traceback."""
+try:
+    PhononStop  # noqa: B018  step 1 defines it, with the IPython handler that halts Run all and shows only the message
+except NameError:  # this file run on its own, outside the notebook
+    class PhononStop(Exception):
+        """A problem the user can fix. Shown as a short message instead of a long Python traceback."""
 
-    def _render_traceback_(self):  # IPython / Colab show this instead of the traceback
-        return ["", "=" * 78, "STOPPED: " + str(self), "=" * 78]
+        def _render_traceback_(self):
+            return ["", "=" * 78, "STOPPED: " + str(self), "=" * 78]
 
 
 def stop(msg):
@@ -1514,20 +1517,34 @@ def evaluate(m, settings, accept):
     say(f"Public guard: clean speech      {pct(cb, cn)}   {pct(ca, cn)}    {cb} -> {ca} of {cn}")
     say(f"Public guard: background voices {pct(tb, tn)}   {pct(ta, tn)}    {tb} -> {ta} of {tn}")
     say("")
+    def guard_line(what, e0, e1, ok, limit):
+        # what the guard line really shows, in plain words
+        if e1 == e0:
+            return f"{what} is unchanged ({e0} errors)"
+        if e1 < e0:
+            return f"{what} got slightly better ({e1} vs {e0} errors)"
+        if ok:
+            return f"{what} got slightly worse ({e1} vs {e0} errors), which is within the {limit} allowed"
+        return f"{what} got worse ({e1} vs {e0} errors), more than the {limit} allowed"
+
+    clean_txt = guard_line("clean speech", cb, ca, ok_clean, f"{accept['max_clean_rel_rise'] * 100:.0f}%")
+    talker_txt = guard_line("speech with background voices", tb, ta, ok_talker,
+                            f"{accept['max_talker_rel_rise'] * 100:.0f}%")
     if accepted:
         rel = drop / max(hb, 1) * 100
-        say(f"RESULT: the adapted model makes {rel:.0f}% fewer errors on your held-out speech and is not worse on the "
-            "public guard set. Continue with step 12 to export it.")
+        say(f"RESULT: the adapted model makes {rel:.0f}% fewer errors on your held-out speech ({ha} vs {hb}). "
+            f"On the public guard set, {clean_txt}, and {talker_txt}. Continue with step 12 to export it.")
         if not ok_talker:
             say(f"WARNING: it is worse on speech with other people talking in the background ({tb} -> {ta} errors). You "
                 "chose to keep it anyway in step 2; use it only where you dictate without other voices around.")
     else:
         why = []
         if not ok_hold:
-            why.append("it did not make clearly fewer errors on your own held-out speech "
-                       f"(it needs at least {accept['min_fewer_errors']} and {accept['min_rel_drop'] * 100:.0f}% fewer)")
+            why.append(f"it did not make clearly fewer errors on your own held-out speech ({hb} -> {ha} errors; it needs "
+                       f"at least {accept['min_fewer_errors']} and {accept['min_rel_drop'] * 100:.0f}% fewer)")
         if not ok_clean:
-            why.append("it made general English recognition worse on the public guard set")
+            why.append("it made general English recognition worse on the public guard's clean speech "
+                       f"({cb} -> {ca} errors, more than the {accept['max_clean_rel_rise'] * 100:.0f}% allowed)")
         if not ok_talker:
             why.append("it made recognition worse when other people are talking in the background "
                        f"({tb} -> {ta} errors, more than the {accept['max_talker_rel_rise'] * 100:.0f}% allowed)")

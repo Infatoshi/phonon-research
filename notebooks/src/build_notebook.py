@@ -51,9 +51,40 @@ STEPS = [
 import subprocess
 
 
-class PhononNoGPU(Exception):
+class PhononStop(Exception):
+    \"\"\"A problem the user can fix: shown as a short STOPPED message, never a Python traceback. It is a real error
+    for the notebook, so Runtime > Run all halts at the step that raised it.\"\"\"
+
     def _render_traceback_(self):
         return ["", "=" * 78, "STOPPED: " + str(self), "=" * 78]
+
+
+def _phonon_stop_handler(shell, etype, evalue, tb, tb_offset=None):
+    # an error reply with only the message as its traceback: the cell fails (so Run all stops) and shows just that
+    shell._showtraceback(etype, evalue, evalue._render_traceback_())
+
+
+try:
+    get_ipython().set_custom_exc((PhononStop,), _phonon_stop_handler)
+except NameError:  # not running in IPython
+    pass
+_PHONON_DONE = set()  # the steps that finished in this session (a step that stopped is not in it)
+
+
+def _phonon_step(n):
+    \"\"\"Each step starts with this: it refuses to run while an earlier step stopped or has not been run.\"\"\"
+    _PHONON_DONE.discard(n)
+    missing = [k for k in range(1, n) if k not in _PHONON_DONE]
+    if missing:
+        raise PhononStop(f"Step {missing[0]} stopped or has not run yet. Fix what step {missing[0]} says, run it "
+                         f"again, then run step {n} (or use Runtime > Run all).")
+
+
+def _phonon_done(n):
+    _PHONON_DONE.add(n)
+
+
+_phonon_step(1)
 
 
 def _gpu_name():
@@ -66,8 +97,8 @@ def _gpu_name():
 
 GPU_NAME = _gpu_name()
 if not GPU_NAME:
-    raise PhononNoGPU("This runtime has no GPU. Open the menu Runtime > Change runtime type, choose 'T4 GPU' under "
-                      "Hardware accelerator, click Save, then choose Runtime > Run all again.")
+    raise PhononStop("This runtime has no GPU. Open the menu Runtime > Change runtime type, choose 'T4 GPU' under "
+                     "Hardware accelerator, click Save, then choose Runtime > Run all again.")
 print("GPU found:", GPU_NAME)
 """),
     ("2. Settings (optional)",
@@ -187,7 +218,13 @@ def build(guard_commit):
     cells = [new_markdown_cell(INTRO)]
     for title, text, code in STEPS:
         cells.append(new_markdown_cell(f"### {title}\n{text}"))
-        c = new_code_cell(engine_cell if code is None else code.rstrip("\n") + "\n")
+        n = int(title.split(".")[0])
+        src = (engine_cell if code is None else code).rstrip("\n") + "\n"
+        # every step refuses to run after an earlier step stopped (step 1 defines the guard, then calls it itself),
+        # and records that it finished
+        head, rest = src.split("\n", 1)
+        src = head + "\n" + ("" if n == 1 else f"_phonon_step({n})\n") + rest + f"_phonon_done({n})\n"
+        c = new_code_cell(src)
         if code is None or "display-mode" in (code or ""):
             c.metadata["cellView"] = "form"
         cells.append(c)

@@ -107,8 +107,43 @@ print("COLLECT_JSON" + json.dumps({"metrics": m, "state": st, "downloads": dl, "
 '''
 
 
-def run(name, keep=None):
-    case = dict(CASES[name], name=name)
+def analyze(out):
+    """What one Run all did, from the runner's RUNALL_JSON line: the reply status of every cell in order, and checks:
+    halted = after the first cell that failed, the kernel aborted every later cell and none of them printed anything;
+    quiet = the failing cell showed a STOPPED message and no Python traceback;
+    guards = each later step, run on its own, printed only 'STOPPED: Step K stopped or has not run yet ...' (K = the
+    step that stopped) and failed, so it halts Run all too."""
+    m = re.search(r"RUNALL_JSON(.*)", out)
+    if not m:
+        return {"stopped": [], "all_done": False, "cells": [], "checks": {"runner": "no RUNALL_JSON"}}
+    j = json.loads(m.group(1))
+    cells, guard = j["runall"], j["guard"]
+    fail = next((i for i, c in enumerate(cells) if c["status"] not in ("ok", "aborted")), None)
+    checks = {}
+    stopped = []
+    if fail is not None:
+        fc = cells[fail]
+        stopped = [s.rstrip("=").strip() for s in re.findall(r"STOPPED: (.*)", fc["out_tail"])]
+        checks["failed_cell"] = fc["title"] + ": " + str(fc["status"])
+        checks["halted"] = all(c["status"] in ("aborted", "not run (kernel died)") and c["chars"] == 0
+                               for c in cells[fail + 1:])
+        checks["quiet"] = bool(stopped) and not fc["python_traceback"]
+        if fc["kind"] == "notebook" and fc["status"] == "error":
+            k = int(fc["title"].split(".")[0])
+            want = f"STOPPED: Step {k} stopped or has not run yet"
+            checks["guards"] = len(guard) > 0 and all(
+                g["status"] == "error" and want in g["out_tail"] and not g["python_traceback"] and g["chars"] < 800
+                for g in guard)
+            checks["guards_checked"] = len(guard)
+    return {"stopped": stopped[:2], "all_done": fail is None and "ALL CELLS DONE" in out, "checks": checks,
+            "cells": [{k: c[k] for k in ("title", "kind", "status", "secs", "chars", "python_traceback")}
+                      for c in cells + guard]}
+
+
+def run(case_name, keep=None, name=None):
+    """Runs case `case_name`; its files are results/<name>.* (name defaults to the case's own)."""
+    name = name or case_name
+    case = dict(CASES[case_name], name=name)
     RES.mkdir(exist_ok=True)
     log = open(RES / f"{name}.log", "w")
 
@@ -120,11 +155,8 @@ def run(name, keep=None):
 
     script = RES / f"{name}.script.py"
     included = convert(NB, case, script)
-    text = script.read_text()
-    all_cells = cell_sources(NB)
-    assert included == all_cells[: len(included)], "the test script does not run the notebook's cells in order"
-    for src in included:  # cells after the case's stop_after are left out on purpose
-        assert src in text, "a notebook cell is not byte-identical in the test script"
+    # the runner sends each notebook cell's source as is, in order (cells after the case's stop_after are left out)
+    assert included == cell_sources(NB)[: len(included)], "the runner does not run the notebook's cells verbatim in order"
     L(f"case {name}: {case.get('what', '')}")
     sess = keep or f"nbt-{name.replace('_', '-')}"[:30]
     b0 = balance()
@@ -181,14 +213,15 @@ def run(name, keep=None):
                                       RES / f"{name}.run{k}.out", case.get("kill_marker") if k == 0 else None)
             out = r.stdout + "\n" + r.stderr
             log.write(f"===== run {k} stdout/stderr =====\n{out}\n")
-            stopped = [s.rstrip("=").strip() for s in re.findall(r"STOPPED: (.*)", out)]
-            notes = re.findall(r"NOTE: (.*)", out)
-            L(f"run {k}: exec rc {r.returncode} ({how}) in {dt}s; stopped: {stopped[:1]}; done: {'ALL CELLS DONE' in out}")
+            ra = analyze(out)
+            printed = out.split("RUNALL_JSON")[0]  # what the cells printed (the JSON line repeats their tails)
+            notes = re.findall(r"NOTE: (.*)", printed)
+            L(f"run {k}: exec rc {r.returncode} ({how}) in {dt}s; stopped: {ra['stopped'][:1]}; done: {ra['all_done']}; "
+              f"checks: {ra['checks']}")
             if how == "timeout":
                 res["error"] = f"run {k} hit its time limit ({min(case.get('timeout', 5400), left)} s)"
-            res["runs"].append({"rc": r.returncode, "how": how, "secs": round(time.time() - t0, 1), "stopped": stopped[:2],
-                                "notes": notes[:12], "all_done": "ALL CELLS DONE" in out,
-                                "resumed": re.findall(r"Resuming from the checkpoint at step \d+ of \d+", out)})
+            res["runs"].append({"rc": r.returncode, "how": how, "secs": round(time.time() - t0, 1), "notes": notes[:12],
+                                "resumed": re.findall(r"Resuming from the checkpoint at step \d+ of \d+", printed), **ra})
         cp = RES / f"{name}.collect.py"
         cp.write_text(COLLECT)
         for attempt in range(2):  # the client has lost its connection here once ("Connection was lost.")
@@ -220,5 +253,9 @@ if __name__ == "__main__":
     import signal
     # run_matrix.py terminates a case past its wall-clock limit; exit through `finally` so the runtime is stopped
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
-    keep =sys.argv[sys.argv.index("--keep") + 1] if "--keep" in sys.argv else None
-    run(sys.argv[1], keep)
+    def opt(flag):
+        return sys.argv[sys.argv.index(flag) + 1] if flag in sys.argv else None
+
+    if opt("--notebook"):  # e.g. an older build, to check that the harness catches a known bug (negative control)
+        NB = Path(opt("--notebook")).resolve()
+    run(sys.argv[1], opt("--keep"), opt("--as"))

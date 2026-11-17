@@ -33,7 +33,7 @@ requeued = {}
 failed = []
 running = []
 while cases or running:
-    while cases and active() < n:
+    if cases and active() < n:  # one start per pass, so a refused allocation is seen before the next start
         c = cases.pop(0)
         (HERE / "results" / f"{c}.json").unlink(missing_ok=True)  # a stale result must not stand in for this run
         log =open(HERE / "results" / f"{c}.runner.out", "w")

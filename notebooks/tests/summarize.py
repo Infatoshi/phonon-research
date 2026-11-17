@@ -20,9 +20,18 @@ def verdict(case, r):
     ok = True
     if r.get("error"):
         return False, r["error"][:80]
+    ch = last.get("checks")
+    if ch is None:
+        return False, "run without the cell-by-cell runner (no Run all checks)"
     if "stopped" in e:
         s = " ".join(last.get("stopped") or [])
         ok &= bool(re.search(e["stopped"], s))
+        # Run all must halt at the stop, quietly, and every later step must refuse to run on its own
+        ok &= bool(ch.get("halted") and ch.get("quiet") and ch.get("guards"))
+        out.append(f"halted at {ch.get('failed_cell', '?').split(':')[0]}: "
+                   f"{'later cells aborted' if ch.get('halted') else 'LATER CELLS RAN'}, "
+                   f"{'no traceback' if ch.get('quiet') else 'TRACEBACK SHOWN'}, "
+                   f"{ch.get('guards_checked', 0)} later steps {'each stop in one line' if ch.get('guards') else 'NOT GUARDED'}")
         out.append("stopped: " + (s[:150] or "did not stop"))
     elif last.get("stopped"):
         out.append("stopped: " + last["stopped"][0][:150])
@@ -30,7 +39,7 @@ def verdict(case, r):
         ok &= bool(last.get("all_done"))
     if e.get("resumed"):
         ok &= any(x.get("resumed") for x in runs)
-        out.append("; ".join(sum((x.get("resumed") or [] for x in runs), [])) or "no resume line")
+        out.append("; ".join(dict.fromkeys(sum((x.get("resumed") or [] for x in runs), []))) or "no resume line")
     if "note" in e:
         ok &= any(e["note"] in n for x in runs for n in x.get("notes", []))
     if (r.get("collected") or {}).get("error"):

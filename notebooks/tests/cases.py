@@ -30,8 +30,9 @@ def _watchdog():
                 s = 0
             if s >= 10:
                 print("[harness] killing the kernel mid-training (checkpoint at step", s, ")", flush=True)
-                # the marker tells run_case.py the kernel is gone: the colab client never gets a reply from a killed
-                # kernel and would otherwise wait out its whole --timeout
+                # the notebook runs in its own kernel under the runner, which notices the death by itself; the marker
+                # is for run_case.py's kill_marker option, for a test that kills the kernel `colab exec` talks to
+                # (whose client never gets a reply from a killed kernel and would wait out its whole --timeout)
                 open("/content/harness/killed_mid_training", "w").write(str(s))
                 time.sleep(0.5)
                 os.kill(os.getpid(), signal.SIGKILL)
@@ -120,6 +121,6 @@ CASES = {
     "drive_resume": {"what": "Drive mode; kernel killed mid-training; Run all again on a wiped machine",
                      "upload": ["A10_tx.zip"], "settings": {"USE_GOOGLE_DRIVE": True, "MAKE_FOR": "adapter only"},
                      "setup": KILL_MID_TRAINING, "setup_rerun": FRESH_MACHINE_EXCEPT_DRIVE, "runs": 2,
-                     "kill_marker": "content/harness/killed_mid_training", "timeout": 1800,
+                     "timeout": 1800,
                      "expect": {"resumed": True, "all_done": True}},
 }
