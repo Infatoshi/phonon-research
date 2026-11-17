@@ -6,9 +6,10 @@ on:
 
 jobs:
   lint:
-    # Lint only scripts/, which is ruff-clean today; ml/ and tools/ are not, and are left as they ran.
+    # Lint scripts/ and the notebook's local helper tools/voice_pack.py, which are ruff-clean; the rest of ml/ and
+    # tools/ is not, and is left as it ran.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv run --with ruff ruff check scripts
+      - run: uv run --with ruff ruff check scripts tools/voice_pack.py

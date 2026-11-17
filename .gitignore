@@ -14,5 +14,17 @@
 /ml/research/record_terms/read_script.jsonl
 /ml/research/record_terms/recordings.jsonl
 /ml/research/record_terms/wav/
+# notebook tests: stand-in speaker packs, per-run logs and CLI session state stay local
+/notebooks/tests/packs/
+/notebooks/tests/results/
+/notebooks/tests/.colab_sessions.json*
+# one-off development diagnostics run on the VM while building the notebook; the harness does not use them
+/notebooks/tests/diag*.py
+/notebooks/tests/dbg.py
+/notebooks/tests/dev_rerun.py
+/notebooks/tests/mlx_speed.py
+/notebooks/tests/verify_base.py
+*.zip.part
+/notebooks/tests/**/*_adapter.zip
 # Research trained on a third-party app's output; kept on the research machines
 /ml/research/distill_v1/

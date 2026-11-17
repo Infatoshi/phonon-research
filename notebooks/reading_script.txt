@@ -1,0 +1,113 @@
+# Phonon reading script, version 1. Written for this project and released into the public domain (CC0).
+# Read one numbered line per recording and name the file after its number: 001.m4a, 002.m4a, ... (any audio format).
+# About 10 minutes in total at a relaxed speaking pace. Speak the way you dictate: naturally, not like a news reader.
+# Read numbers, dates and symbols the way you would say them. If you stumble, record that line again.
+# Lines 101 and up are yours: see the end of this file.
+001 Hi Sam, thanks for sending the draft over this morning. I'll read it tonight and get back to you tomorrow.
+002 Can we move our Thursday call to Friday at two thirty? Something came up and I need the afternoon free.
+003 The quick brown fox jumps over the lazy dog, but the lazy dog doesn't seem to mind very much.
+004 Please remind me to buy milk, eggs, a loaf of bread and some fresh basil on the way home.
+005 I think the main problem is that nobody owns the deployment script, so it breaks every few weeks.
+006 Her flight lands at six forty five in the evening, so pick her up from the north terminal.
+007 We measured a twelve percent drop in latency after switching to the new cache.
+008 Thick fog rolled over the harbour while the fishing boats waited for the tide to turn.
+009 Could you send me the invoice as a PDF? The spreadsheet version didn't open on my phone.
+010 Just a quick note to say the meeting notes are in the shared folder under this week's date.
+011 The children chased each other through the orchard, laughing and shouting until sunset.
+012 My address is forty two Maple Avenue, apartment three B, and the postal code is on the envelope.
+013 If the test fails again, roll back to yesterday's build and open a ticket with the logs attached.
+014 Measure twice, cut once. That was my grandfather's rule, and he rarely wasted a single board.
+015 I'm not sure whether the venue holds two hundred people or two hundred and fifty. Can you check?
+016 The judge paused, adjusted her glasses, and asked the witness to repeat the last sentence slowly.
+017 Let's schedule the review for the first week of March, after the quarterly numbers are final.
+018 A gentle breeze carried the smell of rain across the dry fields and into the village square.
+019 Thanks again for your patience. The replacement part should arrive by Tuesday at the latest.
+020 Our goal for the next sprint is to cut the onboarding flow from seven screens down to three.
+021 She whispered the answer, but the whole room heard it anyway and burst out laughing.
+022 Turn left at the second set of lights, then take the exit marked for the airport and the zoo.
+023 The function returns an empty list when the input is null, which is why the page shows nothing.
+024 Joy, worry, pride and boredom all crossed his face in the space of a few seconds.
+025 I'd like to book a table for four at seven o'clock on Saturday, preferably near the window.
+026 The budget for the pilot is eighteen thousand dollars, and we have spent about a third of it.
+027 Vivid yellow leaves drifted down onto the wet pavement outside the old library.
+028 Could everyone please update their status by end of day? I'm putting the report together tonight.
+029 He fixed the squeaky hinge with a drop of oil and a very small screwdriver.
+030 The new version adds dark mode, faster search, and a setting to export everything as a zip file.
+031 We should thank the volunteers publicly. They gave up three weekends in a row to make this happen.
+032 Few things are as satisfying as a clean kitchen, a full fridge and a quiet evening.
+033 Remind me to call the dentist on Monday about rescheduling my appointment.
+034 The chart shows revenue on the vertical axis and months on the horizontal axis, from January to June.
+035 Zebras, giraffes and a sleepy lion were the highlights of the safari for the youngest kids.
+036 Honestly, I think we should ship it now and fix the small issues in a follow-up release.
+037 Water boils at a lower temperature at high altitude, so the pasta takes longer to cook.
+038 Please forward this to the whole team, and copy in Priya and Daniel from the legal department.
+039 The ship's captain checked the compass, then the stars, and finally the crumpled paper map.
+040 Our server costs went up by almost forty percent this quarter, mostly because of storage.
+041 I'm running about ten minutes late. Go ahead and start without me, and I'll catch up.
+042 Bright orange pumpkins lined the steps of every house on the street.
+043 Can you explain why the query takes so long? It only touches about a thousand rows.
+044 The museum opens at nine, closes at five, and is free on the first Sunday of every month.
+045 Let me know if you need anything else from me before the deadline on the fifteenth.
+046 A thousand tiny bubbles rose through the glass and burst quietly at the surface.
+047 We're hiring two engineers and a designer. If you know anyone good, please send them my way.
+048 The update failed because the disk was full. I cleared the cache and it worked on the second try.
+049 Grandma's recipe calls for a pinch of nutmeg, a cup of sugar and three ripe bananas.
+050 Thank you for the thoughtful feedback. I've made most of the changes, and I've replied to the rest.
+051 The violin's sharp, clear note hung in the air long after the bow had stopped moving.
+052 What time does the pharmacy close on weekends? I need to pick up a prescription.
+053 To reproduce the bug, open settings, toggle the switch twice, and then restart the app.
+054 The garden hose sprang a leak, and by the time we noticed, the whole lawn was a swamp.
+055 I've attached the slides from today's talk, along with links to the papers I mentioned.
+056 Please don't use my personal email for work things. My work address is on my profile.
+057 The hikers reached the summit just as the clouds parted and the valley appeared below them.
+058 Version two point one fixes the crash on startup and makes the sync about twice as fast.
+059 We need a decision by Wednesday, otherwise the supplier will give our slot to someone else.
+060 Each morning the baker shapes the dough, lets it rise, and bakes it before dawn.
+061 Can you double check the numbers in row fourteen? They don't add up to the total at the bottom.
+062 The puppy chewed through two shoes, a cushion and the corner of my favourite rug.
+063 I'm happy to review the pull request, but I won't get to it until after lunch.
+064 Their youngest daughter plays the cello, the trumpet and, when nobody is listening, the drums.
+065 Our office is closed on the twenty fourth and the twenty fifth for the holidays.
+066 Rough waves crashed against the pier, sending cold spray over anyone who walked too close.
+067 Please add a short summary at the top, so people who only read one paragraph get the point.
+068 Seven out of ten users never open the advanced menu, so we're moving the export option out of it.
+069 The fire crackled, the kettle whistled, and the cat stretched lazily in front of the hearth.
+070 Sorry for the slow reply. I was travelling all week and only saw your message this morning.
+071 The meeting is in room four oh nine, on the fourth floor, at the end of the hallway.
+072 She keeps a notebook of every word she doesn't know and looks them up at the end of the day.
+073 If we automate the weekly report, we'll save each analyst about three hours every Friday.
+074 Heavy snow closed the mountain pass, so the trucks had to wait in the town below.
+075 Can we use the blue version of the logo? The green one disappears on a white background.
+076 I'll be out of the office from the third to the tenth, with limited access to email.
+077 The orchestra tuned up, the lights dimmed, and a hush spread across the crowded hall.
+078 Make sure the backup runs before the migration, and keep a copy somewhere outside the cluster.
+079 We ordered pizza, salad and garlic bread, and somehow there was nothing left after ten minutes.
+080 Please confirm the shipping address, because the last two packages went to the old office.
+081 The detective noticed a muddy footprint near the window and a broken latch on the gate.
+082 How much would it cost to upgrade all forty laptops to sixteen gigabytes of memory?
+083 Quiet streets, wide pavements and plenty of trees make the neighbourhood perfect for walking.
+084 I disagree with the second point. The data shows the opposite trend after the price change.
+085 Pack a raincoat, a warm sweater and comfortable shoes. The forecast says it will be wet and windy.
+086 The new hire starts on Monday. Let's make sure her laptop, badge and accounts are ready by then.
+087 Purple and gold streaks filled the sky as the sun dipped below the hills.
+088 Could you summarise the main risks in three bullet points for the board meeting?
+089 He apologised twice, paid for the broken vase, and promised never to play football indoors again.
+090 Our app now supports English, Spanish, French and German, and Japanese is coming next month.
+091 The recipe says to whisk the eggs until they double in volume, which takes about five minutes.
+092 Please book me on the early train to the city and a hotel within walking distance of the venue.
+093 Every winter the lake freezes solid, and the whole town comes out to skate on weekends.
+094 I've pushed a fix for the login issue. It was a timezone bug in how we compared the expiry dates.
+095 The volunteers planted three hundred trees along the river, from the bridge to the old mill.
+096 Let's keep the agenda short: updates, blockers, and one decision about the launch date.
+097 A curious fox watched us from the edge of the woods, then vanished without a sound.
+098 Could we get a quote for printing five hundred copies, double sided, on recycled paper?
+099 Thanks, everyone. That's all for today. I'll send out the notes and the action items shortly.
+100 This is the last line of the script. Thank you for reading, and good luck with your new voice model.
+# ---------------------------------------------------------------------------------------------------------------------
+# YOUR OWN WORDS (strongly recommended): the model learns most from what it gets wrong today. Add 10 to 30 lines of
+# your own, numbered 101, 102, ..., each a natural sentence that uses a name, product, place, or piece of jargon you
+# dictate often (a colleague's name, your company's product, a medical or legal term, a programming library), e.g.
+#   101 I asked Siobhan to send the Kubernetes manifests to the Thursday standup channel.
+#   102 The patient's echocardiogram showed mild mitral regurgitation, so we'll repeat it in six months.
+# Write them in this file below this block (or in your own copy), record them like the others, and also list the
+# words themselves, one per line, in a file named terms.txt next to your recordings.
