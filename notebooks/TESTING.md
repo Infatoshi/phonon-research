@@ -17,28 +17,34 @@ run on its own afterwards, must print only `STOPPED: Step K stopped or has not r
 Stand-in speakers are public: A is a VoxPopuli accented-English speaker (CC0), B is a GLOBE speaker (CC0), and the
 non-English case uses FLEURS Spanish test clips (CC BY 4.0). Each case has a hard wall-clock limit, and its runtime
 is stopped in every outcome. "units" is the account's measured rate (T4 1.07, CPU 0.08 per hour) times the runtime's
-allocated time, 1.74 in total for the table. All 22 rows ran on the committed notebook.
+allocated time, 1.85 in total for the table.
+
+Five rows ran on the committed notebook: happy_n8_10, cpu_only, bad_noaudio, drive_refused and small_2. The other 17
+ran on the build before it, 18918e9. The two builds differ only in printed text: the intro and step 2 notes, step
+7's install-time message, step 12's progress lines, step 13's closing lines and step 11's line wrapping. In this
+happy_n8_10 run, step 12 took 16.4 min. It printed a progress line every 45 s throughout. The ONNX export took
+about 10 minutes, and the two test decodes of the Mac version took about 4 minutes.
 
 | case | runtime | what | result | notebook min | runtime min | peak GPU GB | peak RAM GB | units (rate x time) | details |
 |---|---|---|---|---:|---:|---:|---:|---:|---|
 | bad_format | T4 | corrupt / non-audio files only | PASS | 0.2 | 0.6 | 0.0 | 1.24 | 0.01 | halted at 6. Check the recordings: later cells aborted, no traceback, 7 later steps each stop in one line; stopped: None of your recordings can be used (see the notes above). Each file should be one sentence or paragraph of speech, 1 to 30 seconds long. Fix the file |
 | bad_long | T4 | every clip over 60 s | PASS | 0.2 | 1.0 | 0.0 | 1.28 | 0.02 | halted at 6. Check the recordings: later cells aborted, no traceback, 7 later steps each stop in one line; stopped: None of your recordings can be used (see the notes above). Each file should be one sentence or paragraph of speech, 1 to 30 seconds long. Fix the file |
-| bad_noaudio | T4 | zip with no audio | PASS | 0.3 | 3.5 | 0.0 | 1.31 | 0.06 | halted at 6. Check the recordings: later cells aborted, no traceback, 7 later steps each stop in one line; stopped: No audio files were found in what you provided. Put your recordings (.wav, .flac, .m4a or .mp3) in the zip (or in My Drive/Phonon/voice) and use Runti |
+| bad_noaudio | T4 | zip with no audio | PASS | 0.2 | 0.3 | 0.0 | 1.22 | 0.01 | halted at 6. Check the recordings: later cells aborted, no traceback, 7 later steps each stop in one line; stopped: No audio files were found in what you provided. Put your recordings (.wav, .flac, .m4a or .mp3) in the zip (or in My Drive/Phonon/voice) and use Runti |
 | bad_short | T4 | silent clips and sub-second blips | PASS | 0.3 | 0.5 | 0.0 | 1.26 | 0.01 | halted at 6. Check the recordings: later cells aborted, no traceback, 7 later steps each stop in one line; stopped: None of your recordings can be used (see the notes above). Each file should be one sentence or paragraph of speech, 1 to 30 seconds long. Fix the file |
 | big_40 | T4 | 40 min with transcripts, upload mode, all exports | PASS | 6.4 | 7.3 | 7.97 | 8.39 | 0.13 | hold-out WER 13.0 -> 10.3%, clean guard 46->42, talker guard 135->149 errors, rejected |
 | big_40_keep | T4 | 40 min, KEEP_EVEN_IF_WORSE_WITH_BACKGROUND_VOICES ticked, all exports, upload mode | PASS | 19.8 | 20.3 | 7.97 | 11.47 | 0.36 | hold-out WER 13.0 -> 10.3%, clean guard 46->42, talker guard 135->149 errors, ACCEPTED; onnx WER 10.6% vs PyTorch 10.3% (base in onnx 14.6%) pass; mlx WER 10.2% vs PyTorch 10.3% (base in mlx 13.1%) pass |
-| cpu_only | CPU | CPU-only runtime (user forgot the GPU) | PASS | 0.2 | 0.4 | 0.0 | 1.21 | 0.00 | halted at 1. Check that this runtime has a GPU: later cells aborted, no traceback, 12 later steps each stop in one line; stopped: This runtime has no GPU. Open the menu Runtime > Change runtime type, choose 'T4 GPU' under Hardware accelerator, click Save, then choose Runtime > Ru |
+| cpu_only | CPU | CPU-only runtime (user forgot the GPU) | PASS | 0.2 | 0.5 | 0.0 | 1.2 | 0.00 | halted at 1. Check that this runtime has a GPU: later cells aborted, no traceback, 12 later steps each stop in one line; stopped: This runtime has no GPU. Open the menu Runtime > Change runtime type, choose 'T4 GPU' under Hardware accelerator, click Save, then choose Runtime > Ru |
 | drive_full | T4 | Drive mode, Drive nearly full (600 MB free) | PASS | 0.2 | 0.5 | 0.0 | 1.33 | 0.01 | halted at 5. Bring in your recordings: later cells aborted, no traceback, 8 later steps each stop in one line; stopped: Your Google Drive has 0.6 GB free, and the results need about 3.0 GB. Free up space (or untick USE_GOOGLE_DRIVE in step 2 and download the results ins |
 | drive_no_folder | T4 | Drive mode, no My Drive/Phonon/voice folder | PASS | 0.2 | 1.0 | 0.0 | 1.32 | 0.02 | halted at 5. Bring in your recordings: later cells aborted, no traceback, 8 later steps each stop in one line; stopped: Drive is connected, but there is no folder My Drive/Phonon/voice. Create it (in drive.google.com: New > Folder 'Phonon', then inside it a folder 'voic |
-| drive_refused | T4 | Drive mode, user refuses the permission pop-up | PASS | 0.2 | 1.3 | 0.0 | 1.31 | 0.02 | halted at 5. Bring in your recordings: later cells aborted, no traceback, 8 later steps each stop in one line; stopped: Google Drive could not be connected (MessageError: Error: credential propagation was unsuccessful). |
+| drive_refused | T4 | Drive mode, user refuses the permission pop-up | PASS | 0.2 | 0.4 | 0.0 | 1.3 | 0.01 | halted at 5. Bring in your recordings: later cells aborted, no traceback, 8 later steps each stop in one line; stopped: Google Drive could not be connected (MessageError: Error: credential propagation was unsuccessful). |
 | drive_resume | T4 | Drive mode; kernel killed mid-training; Run all again on a wiped machine | PASS | 7.6 | 8.9 | 9.13 | 8.09 | 0.16 | Resuming from the checkpoint at step 10 of 30; hold-out WER 13.4 -> 9.1%, clean guard 46->49, talker guard 135->148 errors, rejected |
-| happy_n8_10 | T4 | 10 min with transcripts, Phonon N8avg base, upload mode | PASS | 14.4 | 14.7 | 9.64 | 11.23 | 0.26 | hold-out WER 13.4 -> 9.4%, clean guard 46->45, talker guard 135->148 errors, ACCEPTED; onnx WER 9.4% vs PyTorch 9.4% (base in onnx 14.1%) pass; mlx WER 9.4% vs PyTorch 9.4% (base in mlx 13.4%) pass |
+| happy_n8_10 | T4 | 10 min with transcripts, Phonon N8avg base, upload mode | PASS | 23.6 | 23.9 | 9.64 | 11.28 | 0.43 | hold-out WER 13.4 -> 9.4%, clean guard 46->45, talker guard 135->148 errors, ACCEPTED; onnx WER 9.4% vs PyTorch 9.4% (base in onnx 14.1%) pass; mlx WER 9.4% vs PyTorch 9.4% (base in mlx 13.4%) pass |
 | happy_v3_10 | T4 | 10 min with transcripts, Parakeet v3 base, upload mode | PASS | 5.8 | 6.7 | 12.76 | 6.86 | 0.12 | hold-out WER 12.6 -> 8.2%, clean guard 49->51, talker guard 201->318 errors, rejected |
 | happy_v3_keep | T4 | 10 min, Parakeet v3 base, KEEP_EVEN_IF_WORSE_WITH_BACKGROUND_VOICES ticked, all exports | PASS | 17.2 | 18.1 | 12.76 | 11.28 | 0.32 | hold-out WER 12.6 -> 8.2%, clean guard 49->51, talker guard 201->318 errors, ACCEPTED; onnx WER 8.5% vs PyTorch 8.2% (base in onnx 11.0%) pass; mlx WER 8.8% vs PyTorch 8.2% (base in mlx 13.2%) pass |
 | non_english | T4 | Spanish speech (FLEURS) | PASS | 2.4 | 2.6 | 5.52 | 8.03 | 0.05 | halted at 9. Prepare the transcripts and the hold-out: later cells aborted, no traceback, 4 later steps each stop in one line; stopped: Your recordings do not sound like English to the base model (only 7% of the words it heard are common English words; English speech gives about 40%).  |
 | notx_10 | T4 | 10 min, no transcripts, terms.txt | PASS | 0.7 | 0.9 | 0.0 | 1.31 | 0.02 | halted at 6. Check the recordings: later cells aborted, no traceback, 7 later steps each stop in one line; stopped: No transcripts were found. This notebook needs to know what you said in each recording: add transcripts.csv (two columns: file,text), or record the re |
 | odd_rates | T4 | 8/22.05/32/44.1/48 kHz, stereo, 24-bit, mp3, m4a | PASS | 0.5 | 0.7 | 0.0 | 1.33 | 0.01 |  |
-| small_2 | T4 | 2 min of speech (warned, not refused) | PASS | 4.0 | 4.2 | 9.24 | 7.91 | 0.07 | hold-out WER 18.7 -> 11.2%, clean guard 46->50, talker guard 135->139 errors, rejected |
+| small_2 | T4 | 2 min of speech (warned, not refused) | PASS | 3.8 | 4.0 | 9.24 | 8.42 | 0.07 | hold-out WER 18.7 -> 11.2%, clean guard 46->50, talker guard 135->139 errors, rejected |
 | time_limit | T4 | session already 11.7 h old (free-tier limit near) | PASS | 0.2 | 0.5 | 0.0 | 1.32 | 0.01 | halted at 5. Bring in your recordings: later cells aborted, no traceback, 8 later steps each stop in one line; stopped: This Colab session has been running for 11.7 hours. Free sessions end after at most 12 hours, so the whole notebook (about 25 min) may not finish in t |
 | tx_names_wrong | T4 | transcripts.csv names match no file | PASS | 0.2 | 0.3 | 0.0 | 1.26 | 0.01 | halted at 6. Check the recordings: later cells aborted, no traceback, 7 later steps each stop in one line; stopped: transcripts.csv was found, but none of its file names match your audio files. The first column must be the audio file's name, e.g. clip_0001.wav. Your |
 | tx_partial | T4 | csv misses 5 files and lists 2 absent files | PASS | 0.2 | 0.3 | 0.0 | 1.28 | 0.01 |  |
@@ -93,7 +99,7 @@ deliberately strict: most users who would gain will be told no. `KEEP_EVEN_IF_WO
 lets a user override only the background-voices check, after reading what it costs. These rates come from 8 harmful
 and 28 helpful adapters, so each is uncertain by several adapters.
 
-## Browser click-through (partly done)
+## Browser click-through (done, except granting Drive access)
 
 Parts A, B and C up to step 11 were run in a browser on 2026-11-17, on commit 0cb788e:
 
@@ -103,19 +109,42 @@ Parts A, B and C up to step 11 were run in a browser on 2026-11-17, on commit 0c
 | B. first-time user | pass, except one bug: on a CPU runtime, Run all showed step 1's STOPPED block correctly, but later cells still ran (step 4 and step 5 got execution counts, and step 5 showed error output) |
 | C. upload path, steps 5 to 11 | pass: the 19 MB zip uploaded in about 23 s; steps 6 to 11 ran with no restart prompt (install 4 s, base model 103 s, training 30 steps in 73 s, held-out word error rate 13.4% to 9.4%) |
 
-Still to be clicked through: steps 12 and 13 (the downloads) of part C, and the Google Drive path (part D). Part B
-should be clicked through again on the fixed notebook.
+The full click-through of commit 18918e9 ran on the night of 2026-11-17:
 
-The part B bug is fixed in two ways. First, every STOPPED message now goes through an IPython exception handler
+| part | time | result |
+|---|---|---|
+| B. CPU runtime, Run all | 1:55 am | pass. Step 1 showed the STOPPED block. Steps 2, 3 and 5 to 13 did not execute (empty brackets, red mark, no output). Step 4 did execute (count [2]) and printed only `STOPPED: Step 1 stopped or has not run yet ...`. There was no traceback, install or download. Colab adds its own "Next steps: Explain error" button under each stop. |
+| C. upload path, T4 | 2:01 to 2:19 am | pass. The 19 MB upload took under a minute; `Installed in 4 s`; base model 114 s; training 30 steps in 74 s. The RESULT line was as designed (30 vs 43; 45 vs 46; 148 vs 135, within the 10% allowed). Export took 8.9 min, with ONNX 9.4% and MLX 9.4% against PyTorch 9.4%. All three downloads arrived with sizes matching `manifest.json` (22,069,326, 1,236,128,161 and 663,370,560 bytes). Chrome asked once to allow multiple downloads, and the prompt named a `...-colab.googleusercontent.com` address, not colab.research.google.com. |
+| D. Drive refused | same night | pass. "No thanks" on the Drive pop-up gave `STOPPED: Google Drive could not be connected (Error: credential propagation was unsuccessful)` with the retry advice, and no later step ran. |
+| D. Drive granted | not tested | Google's consent screen is titled "Google Drive for desktop wants access to your Google Account". It lists, all unticked, with a "Select all": see, edit, create and delete all Drive files; view Google Photos; mobile client configuration; people information such as profiles and contacts; messages from Google services; the Drive activity record; and more. Granting that is the account owner's decision, so the mount, the copy from Drive, the mid-training resume and the save to Drive remain untested in a real browser. The CLI stand-in cases (`drive_*`) cover the notebook's own logic. |
+
+Twice a T4 request failed with "Failed to assign a backend: No backend with GPU available. Would you like to use a
+runtime with no accelerator?" (Cancel / Connect). Cancelling and retrying once worked both times. The intro now tells
+users to do exactly that.
+
+Changes made after this click-through:
+- The intro and step 2 now say that the Drive permission screen asks for broad access, and that upload needs none.
+- The intro now explains the Chrome multiple-downloads prompt.
+- Step 7 now gives an honest install time.
+- Step 12 now prints a progress line every 45 s.
+- Step 13 now says the downloads continue in the browser.
+- Step 11's RESULT text is now wrapped to 90 columns.
+
+Why step 4 alone executed under Run all after step 1 stopped is not known. In the notebook JSON, step 4 has the
+same cell type and metadata as steps 2 and 3 (`cellView: form`, title-only); the only difference is its size (92 KB
+of code against 1.4 KB). A kernel-level Run all aborts step 4 like every other cell, so this happens in Colab's front
+end, which the CLI cannot drive. It is harmless: step 4's guard runs first and prints only its one-line STOPPED
+message.
+
+The part B bug from the first click-through is fixed in two ways. First, every STOPPED message now goes through an IPython exception handler
 (`set_custom_exc` in step 1), so the cell fails as an error and shows only the message. Second, every step from 2 on
 starts by checking that each earlier step finished in this session. If one stopped or never ran, the step prints
 only `STOPPED: Step K stopped or has not run yet. Fix what step K says, run it again, ...` and fails the same way.
 So even a front end that keeps going after a failed cell runs no real work.
 
-Why later cells ran in the browser is not fully known. Measured on a Colab runtime, through the kernel directly and
-through the runtime's own Jupyter server websocket, the old `_render_traceback_` stop already gave an error reply,
-and the kernel aborted the queued cells after it, the same as for a plain exception. The CLI cannot drive Colab's own
-front end, so the browser check in part B is still needed.
+Why later cells ran in the browser before the fix is not fully known. Measured on a Colab runtime, through the
+kernel directly and through the runtime's own Jupyter server websocket, the old `_render_traceback_` stop already gave
+an error reply, and the kernel aborted the queued cells after it, the same as for a plain exception.
 
 The automated matrix ran unattended through the `colab` command-line client. Four functions in step 4 of the
 notebook need a person and were replaced by stand-ins in those runs; this pass checks them and everything a

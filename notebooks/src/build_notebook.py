@@ -23,6 +23,15 @@ give you both. Nothing needs to be installed on your computer.
 **Runtime > Run all**. Step 5 will ask for your recordings. Everything else runs by itself in about 20 minutes and ends
 by downloading your model (or saving it to Google Drive).
 
+- If Colab says **"No backend with GPU available"**, click **Cancel** (do not accept a runtime without an
+  accelerator: training needs the GPU), wait a minute, and choose **Runtime > Run all** again.
+- At the end, Chrome may ask whether a `...googleusercontent.com` address may **download multiple files**. That
+  address is this notebook's Colab machine sending your three result files: click **Allow** to receive all of them.
+- **Upload (the default) is recommended.** Google Drive is optional (step 2). If you tick it, Google's permission
+  screen asks for broad access: all the files in your Drive, plus other Google data it lists. That is Google's
+  standard Colab Drive connection, not something this notebook chooses or can narrow. Uploading a zip needs no such
+  permission.
+
 **What happens to your audio:** it is copied to this temporary Colab machine (and read from your Google Drive if you
 choose that option), used to train a small adapter, and deleted when the session ends. It is not sent anywhere else.
 The only downloads are the public base model and a small public test set, each pinned and checksum-checked.
@@ -104,14 +113,17 @@ print("GPU found:", GPU_NAME)
     ("2. Settings (optional)",
      "You can leave these as they are. **BASE_MODEL**: which speech model to tune; keep the one your Phonon app uses "
      "(`phonon-n8avg` is the model Phonon ships today; `parakeet-v3` is NVIDIA's newer stock model). "
-     "**USE_GOOGLE_DRIVE**: leave it off to upload a zip in step 5 and download the result at the end. Tick it to read "
-     "your recordings from the Drive folder *My Drive/Phonon/voice* and save the result (and progress, so a "
-     "disconnected session can resume) to *My Drive/Phonon/voice_adapter*; Colab will ask for permission to use your "
-     "Drive. **MAKE_FOR**: which app versions to build (each is about 0.7 to 1.2 GB to download). "
+     "**USE_GOOGLE_DRIVE**: leave it off (recommended) to upload a zip in step 5 and download the result at the end; "
+     "that needs no permission. Tick it to read your recordings from the Drive folder *My Drive/Phonon/voice* and save "
+     "the result (and progress, so a disconnected session can resume) to *My Drive/Phonon/voice_adapter*. Google's "
+     "permission screen for this asks for broad access to your whole Drive and lists other Google data too; that is "
+     "Google's standard Colab Drive connection, not something this notebook chooses. **MAKE_FOR**: which app versions to build (each is about 0.7 to 1.2 GB to download). "
      "**KEEP_EVEN_IF_WORSE_WITH_BACKGROUND_VOICES**: leave it off. Tick it only if step 11 rejected the model "
      "solely because it got worse with other people talking in the background, and you dictate where nobody else talks.",
      """#@title 2. Settings (optional) { display-mode: "form" }
 BASE_MODEL = "phonon-n8avg"  #@param ["phonon-n8avg", "parakeet-v3"]
+# USE_GOOGLE_DRIVE: off (recommended) = upload a zip, no permission needed. On = Google's standard Colab Drive
+# permission screen, which asks for access to your whole Drive and lists other Google data (see the text above).
 USE_GOOGLE_DRIVE = False  #@param {type:"boolean"}
 MAKE_FOR = "Mac and Windows/Linux/Android"  #@param ["Mac and Windows/Linux/Android", "Mac only", "Windows/Linux/Android only", "adapter only"]
 KEEP_EVEN_IF_WORSE_WITH_BACKGROUND_VOICES = False  #@param {type:"boolean"}
@@ -160,7 +172,7 @@ INPUT_DIR = get_recordings(SETTINGS)
 DATA = check_recordings(INPUT_DIR)
 """),
     ("7. Install the training software",
-     "Installs NVIDIA NeMo and the export tools at fixed, tested versions (about 2 to 4 minutes). Colab's own "
+     "Installs NVIDIA NeMo and the export tools at fixed, tested versions (a few seconds if Colab already has them, up to 4 minutes otherwise).Colab's own "
      "libraries are left as they are, so no restart is needed.",
      """#@title 7. Install the training software
 install_packages()

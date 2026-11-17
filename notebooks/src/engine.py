@@ -112,6 +112,13 @@ def say(msg=""):
     print(msg, flush=True)
 
 
+def say_wrapped(msg, width=90):
+    """A long sentence as lines of at most `width` characters, so it does not scroll sideways."""
+    import textwrap
+    print(textwrap.fill(msg, width=width, subsequent_indent="  ", break_long_words=False, break_on_hyphens=False),
+          flush=True)
+
+
 def warn(msg):
     print("NOTE: " + msg, flush=True)
 
@@ -545,7 +552,8 @@ def install_packages():
         for n, v in before.items():
             if v:
                 f.write(f"{n}=={v}\n")
-    say(f"Installing {len(todo)} pinned package(s); this takes about 2 to 4 minutes ...")
+    say(f"Installing {len(todo)} pinned package(s): a few seconds if Colab has them cached, up to 4 minutes "
+        "otherwise ...")
     t0 = time.time()
     uv = shutil.which("uv")
     cmd = ([uv, "pip", "install", "--system", "-c", cons] if uv else [sys.executable, "-m", "pip", "install", "-q", "-c", cons]) + todo
@@ -1532,10 +1540,10 @@ def evaluate(m, settings, accept):
                             f"{accept['max_talker_rel_rise'] * 100:.0f}%")
     if accepted:
         rel = drop / max(hb, 1) * 100
-        say(f"RESULT: the adapted model makes {rel:.0f}% fewer errors on your held-out speech ({ha} vs {hb}). "
-            f"On the public guard set, {clean_txt}, and {talker_txt}. Continue with step 12 to export it.")
+        say_wrapped(f"RESULT: the adapted model makes {rel:.0f}% fewer errors on your held-out speech ({ha} vs {hb}). "
+                    f"On the public guard set, {clean_txt}, and {talker_txt}. Step 12 exports it.")
         if not ok_talker:
-            say(f"WARNING: it is worse on speech with other people talking in the background ({tb} -> {ta} errors). You "
+            say_wrapped(f"WARNING: it is worse on speech with other people talking in the background ({tb} -> {ta} errors). You "
                 "chose to keep it anyway in step 2; use it only where you dictate without other voices around.")
     else:
         why = []
@@ -1548,14 +1556,15 @@ def evaluate(m, settings, accept):
         if not ok_talker:
             why.append("it made recognition worse when other people are talking in the background "
                        f"({tb} -> {ta} errors, more than the {accept['max_talker_rel_rise'] * 100:.0f}% allowed)")
-        say("RESULT: no model was made, because " + "; and ".join(why) + ".")
+        say_wrapped("RESULT: no model was made, because " + "; and ".join(why) + ".")
         if ok_hold and ok_clean and not ok_talker:
-            say("If you only dictate where nobody else is talking, you can keep it anyway: tick "
-                "KEEP_EVEN_IF_WORSE_WITH_BACKGROUND_VOICES in step 2, run step 2, then run steps 11 to 13 again.")
+            say_wrapped("If you only dictate where nobody else is talking, you can keep it anyway: tick "
+                        "KEEP_EVEN_IF_WORSE_WITH_BACKGROUND_VOICES in step 2, run step 2, then run steps 11 to 13 "
+                        "again.")
         else:
-            say("Your current Phonon speech model stays as it is. Recording more (20 to 40 minutes) and running the "
-                "notebook again may help; for speakers the base model already understands well, there may be "
-                "nothing left to gain.")
+            say_wrapped("Your current Phonon speech model stays as it is. Recording more (20 to 40 minutes) and "
+                        "running the notebook again may help; for speakers the base model already understands well, "
+                        "there may be nothing left to gain.")
     return res
 
 
@@ -1744,8 +1753,37 @@ def decode_mlx(folder, rows):
     return res["hyps"]
 
 
+class _Heartbeat:
+    """While a long step runs, prints a short line every `every` seconds (elapsed time and the current stage), so
+    the quiet stretches of the export do not look like a hang. Set .stage as the step moves on."""
+
+    def __init__(self, every=45):
+        import threading
+        self.every, self.stage, self.t0 = every, "starting", time.time()
+        self._done = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def _run(self):
+        while not self._done.wait(self.every):
+            s = int(time.time() - self.t0)
+            say(f"  ... still working ({s // 60} min {s % 60:02d} s so far): {self.stage}")
+
+    def __enter__(self):
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self._done.set()
+        return False
+
+
 def export_all(m, settings, recipe):
     """Step 12: write the adapter and the merged models the app loads, and check each one decodes like PyTorch."""
+    with _Heartbeat() as hb:
+        return _export_all(m, settings, recipe, hb)
+
+
+def _export_all(m, settings, recipe, hb):
     from safetensors.torch import save_file
     load_state()
     ev = STATE.get("eval")
@@ -1773,12 +1811,15 @@ def export_all(m, settings, recipe):
     rep = {"fingerprint": fp, "base": base, "files": {}, "verify": {}}
     session_check(15 * 60, "the export")
     if make != "adapter only":
+        hb.stage = "merging the adapter into the model"
         merged = merge_lora(m)
         m.eval()
         merged_hyps = decode(m, hold)
         rep["verify"]["pytorch_merged_same_text"] = sum(a == b for a, b in zip(merged_hyps, torch_after))
         say(f"Merged the adapter into the model ({merged} layers). Exporting ONNX int8 (about 5 minutes) ...")
+        hb.stage = "exporting and quantising the ONNX model"
         rep["onnx_export_s"] = export_onnx(m, base, out + "/onnx-int8")
+        hb.stage = "test-decoding your held-out speech with the ONNX model"
         e_t, n = corpus(refs, torch_after)
 
         def check(kind, hy, hy_base):
@@ -1799,11 +1840,14 @@ def export_all(m, settings, recipe):
         rep["verify"]["onnx"] = check("ONNX int8", decode_onnx(out + "/onnx-int8", hold), decode_onnx(bo, hold))
         if make in ("Mac and Windows/Linux/Android", "Mac only"):
             say("Building the Mac (MLX) version with the app's own converter ...")
+            hb.stage = "building the Mac (MLX) version"
             rep["mlx_export_s"] = export_mlx(base, out + "/onnx-int8", out + "/mlx")
+            hb.stage = "test-decoding your held-out speech with the Mac version (installs MLX the first time)"
             hy = decode_mlx(out + "/mlx", hold)
             hy_b = None
             if hy is not None:
                 base_mlx = WORK + "/base_mlx_" + base
+                hb.stage = "test-decoding the base model's Mac version, for comparison"
                 if not os.path.exists(base_mlx + "/model.safetensors"):
                     export_mlx(base, bo, base_mlx)
                 hy_b = decode_mlx(base_mlx, hold)
@@ -1815,6 +1859,7 @@ def export_all(m, settings, recipe):
                 rep["verify"]["mlx"]["run"] = STATE.get("mlx_verify_run")
             if make == "Mac only":
                 shutil.rmtree(out + "/onnx-int8")
+    hb.stage = "computing checksums for manifest.json"
     for p in sorted(glob.glob(out + "/**/*", recursive=True)):
         if os.path.isfile(p):
             rep["files"][os.path.relpath(p, out)] = {"size": os.path.getsize(p), "sha256": sha256_file(p)}
@@ -1891,8 +1936,17 @@ def deliver(settings):
             os.replace(zp + ".tmp", zp)
         zips.append(zp)
     for zp in zips:
-        say(f"Downloading {os.path.basename(zp)} ({os.path.getsize(zp) / 1e6:.0f} MB) ... keep this tab open until your browser finishes.")
+        say(f"Sending {os.path.basename(zp)} ({os.path.getsize(zp) / 1e6:,.0f} MB) to your browser ...")
         ui_download(zp)
     STATE["delivered"] = {"zips": [(os.path.basename(z), os.path.getsize(z)) for z in zips], "secs": round(time.time() - t0, 1)}
     save_state()
+    total = sum(os.path.getsize(z) for z in zips) / 1e9
+    n = len(zips)
+    say("")
+    say(f"This step is done, but the {n} download{'s' if n > 1 else ''} ({total:.1f} GB in all) continue in your browser's "
+        "download bar:")
+    for z in zips:
+        say(f"  {os.path.basename(z):42s} {os.path.getsize(z) / 1e6:>8,.0f} MB")
+    say("Do not close this tab until " + ("all of them show" if n > 1 else "it shows") + " as complete. If Chrome asks "
+        "whether a ...googleusercontent.com address may download multiple files, click Allow.")
     return zips
