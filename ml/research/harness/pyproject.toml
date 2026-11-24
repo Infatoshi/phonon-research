@@ -4,13 +4,13 @@ version = "0.1.0"
 description = "Config-driven research flywheel for phonon: corpus, train, eval, queue."
 requires-python = ">=3.12,<3.13"
 dependencies = [
-  # training (versions the bigrun/pool2/pool3 chains actually ran with on gpubox 2026-09-20)
+  # training (torch matches the bigrun/pool2/pool3 chains; transformers/datasets are current floors)
   "torch==2.14.0",
-  "transformers==5.9.0",
+  "transformers==5.10.1",
   "peft==0.20.0",
   "trl==1.13.0",
   "accelerate==1.15.0",
-  "datasets==4.8.5",
+  "datasets==5.0.1",
   "jiwer==3.1.0",
   "whisper-normalizer==0.1.15",
   # retrieval (vocab_v1 Retriever, retrieval_v2 RetrieverV2)

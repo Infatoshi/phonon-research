@@ -39,7 +39,7 @@ trap finish EXIT
 # Restore optional runtime packages without changing project metadata or the NeMo pin.
 if ! uv run --no-sync python -c 'import importlib.metadata as m; assert m.version("nemo_toolkit") == "2.3.0"; import torch, torchaudio'; then
     uv pip install --python .venv/bin/python 'nemo_toolkit[asr]==2.3.0' \
-        'torch==2.14.0' 'torchaudio==2.11.0' 'transformers==5.9.0' \
+        'torch==2.14.0' 'torchaudio==2.11.0' 'transformers==5.10.1' \
         'dill==0.3.8' 'multiprocess<0.70.17'
 fi
 models=(
